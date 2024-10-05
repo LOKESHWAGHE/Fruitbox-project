@@ -17,6 +17,11 @@ const Signup = () => {
                 withCredentials: true, // Important if you're handling cookies or sessions
             });
             console.log(response.data);
+
+            // Store userID in local storage
+        localStorage.setItem('userID', response.data.userID); // Store userID
+
+        
             navigate('/'); // Redirect to login page on successful signup
         } catch (error) {
             console.error('Error registering user:', error);
