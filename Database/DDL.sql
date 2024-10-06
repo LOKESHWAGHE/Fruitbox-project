@@ -69,6 +69,17 @@ CREATE TABLE Subscription (
     FOREIGN KEY (userID) REFERENCES user(userID)
         ON DELETE CASCADE
 );
+CREATE TABLE Subscription_Products (
+    subs_product_id INT PRIMARY KEY AUTO_INCREMENT,
+    subs_ID INT, -- Foreign key from Subscription table
+    productID VARCHAR(50), -- Foreign key from product table
+    quantity INT NOT NULL,
+    FOREIGN KEY (subs_ID) REFERENCES Subscription(subs_ID)
+        ON DELETE CASCADE,
+    FOREIGN KEY (productID) REFERENCES product(productID)
+        ON DELETE CASCADE
+);
+
 
 
 
@@ -96,6 +107,19 @@ select * from product;
 select * from Cart;
 select * from Vendors;
 DROP DATABASE FRUITBOX;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
