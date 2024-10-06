@@ -619,41 +619,6 @@ app.get('/logout', (req, res) => {
 });
 
 
-//subscription
-
-// app.post('/subscription', (req, res) => {
-//     const { userID, subs_Type, StartDate, EndDate } = req.body;
-  
-//     const query = 'INSERT INTO Subscription (userID, subs_Type, StartDate, EndDate) VALUES (?, ?, ?, ?)';
-//     db.query(query, [userID, subs_Type, StartDate, EndDate], (error, results) => {
-//       if (error) {
-//         console.error('Error saving subscription:', error);
-//         return res.status(500).json({ message: 'Error saving subscription' });
-//       }
-//       res.status(201).json({ message: 'Subscription saved successfully!', id: results.insertId });
-//     });
-//   });
-
-// app.post('/subscription', (req, res) => {
-//     const { subs_ID, subs_Type, StartDate, EndDate } = req.body;
-
-//     // Check for required fields
-//     if (!subs_ID || !subs_Type || !StartDate || !EndDate) {
-//         return res.status(400).send('All fields are required!'); // Send a 400 Bad Request
-//     }
-
-//     // Insert the new subscription into the database
-//     const query = 'INSERT INTO Subscription (subs_ID, subs_Type, StartDate, EndDate) VALUES (?, ?, ?, ?)';
-//     db.query(query, [subs_ID, subs_Type, StartDate, EndDate], (error, results) => {
-//         if (error) {
-//             console.error('Error saving subscription:', error);
-//             return res.status(500).json({ message: 'Error saving subscription' });
-//         }
-        
-//         // Redirect or send success response
-//         res.status(201).json({ message: 'Subscription saved successfully!', id: results.insertId });
-//     });
-// });
 
 
 app.post('/subscription', (req, res) => {
@@ -671,11 +636,40 @@ app.post('/subscription', (req, res) => {
             console.error('Error saving subscription:', error);
             return res.status(500).json({ message: 'Error saving subscription' });
         }
+        // Get the generated subs_ID
+        const subsID = results.insertId;
         
         // Redirect or send success response
-        res.status(201).json({ message: 'Subscription saved successfully!', id: results.insertId });
+        res.status(201).json({ message: 'Subscription saved successfully!', id: results.insertId , subsID});
     });
 });
+
+
+app.post('/subscription_products', (req, res) => {
+    console.log('Received request:', req.body);
+    const { subsID, productID, quantity } = req.body;
+
+    console.log('Received cart data:', req.body);  // Log incoming data for debugging
+
+    if (!subsID || !productID || !quantity) {
+        return res.status(400).send('All fields are required');  // Return error if any field is missing
+    }
+
+    const query = `INSERT INTO Subscription_Products (subs_ID, productID, quantity) VALUES (?, ?, ?)`;
+
+    db.query(query, [subsID, productID, quantity], (err, result) => {
+        if (err) {
+            console.error('Error adding product to subscription:', err);  // Log error if query fails
+            res.status(500).send('Error adding product');
+        } else {
+            console.log('Product added to subscription:', result);  // Log successful insert
+            res.status(200).send('Product added to subscription');
+        }
+    });
+});
+
+
+
 
 
 
