@@ -106,20 +106,9 @@ select * from user;
 select * from product;
 select * from Cart;
 select * from Vendors;
+select * from Subscription;
+select * from Subscription_Products;
 DROP DATABASE FRUITBOX;
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
