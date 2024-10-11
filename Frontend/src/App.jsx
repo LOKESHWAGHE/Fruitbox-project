@@ -6,7 +6,6 @@ import Signup from './Components/Signup';
 import Login from './Components/Login';
 import VendorSignup from './Components/VendorSignup';
 import Cart from './cart/Cart';
-import Subscription_cart from './Components/Subscription_cart';
 import UserDashboard from './Components/UserDashboard';
 import FruitSection from './Components/FruitSection';
 import VeggieSection from './Components/VeggieSection';
@@ -19,13 +18,16 @@ import ViewOrders from './Components/ViewOrders';
 import AddProduct from './Components/AddProduct';
 import Invoice from './Components/invoice';
 import Payment from './Components/Payment';
-// import Product_list from './Components/Product_list';
 import MySubscription from './Components/mysubscription'; // Updated import
 import { Toaster } from 'react-hot-toast';
 import Product_list from './Components/Product_list';
 import Subscription_Product_list from './Components/Subscription_Product_list';
 import Subscription_FruitSection from './Components/Subscription_FruitSection';
 import Subscription_VeggieSection from './Components/Subscription_VeggieSection';
+import SubscriptionInvoice from './Components/SubscriptionInvoice'; // Adjust the import path as needed
+import ViewSubscriptionOrder from './Components/ViewSubscriptionOder';
+
+
 
 function App() {
     const [cartItems, setCartItems] = useState(() => {
@@ -67,7 +69,7 @@ function App() {
                 <Route path="/profile" element={<Profiles />} />
                 <Route path="/user/edit" element={<EditProfile />} />
                 <Route path="/cart" element={<Cart cartItems={cartItems} removeFromCart={removeFromCart} clearCart={clearCart} />} />
-                <Route path="/subscription_cart" element={<Subscription_cart cartItems={cartItems} removeFromCart={removeFromCart} clearCart={clearCart} />} />
+                <Route path="/subscription_invoice" element={<SubscriptionInvoice />} />
                  <Route path="/vendor/edit" element={<EditProfileVendor />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
@@ -85,8 +87,9 @@ function App() {
                 <Route path="/invoice" element={<Invoice />} />
                 <Route path="/product_list" element={<Product_list />} />
                 <Route path="/subscription_Product_list" element={<Subscription_Product_list />} />
-                <Route path="/subscription_FruitSection" element={<Subscription_FruitSection />} />
+                <Route path="/subscription_FruitSection" element={<Subscription_FruitSection addToCart={addToCart} clearCart={clearCart} />} />
                 <Route path="/subscription_VeggieSection" element={<Subscription_VeggieSection  />} />
+                <Route path="/viewSubscriptionOrder" element={<ViewSubscriptionOrder  />} />
                 <Route path="/payment" element={<Payment />} />
                 <Route path="/mysubscription" element={<MySubscription />} /> {/* Updated here */}
             </Routes>
