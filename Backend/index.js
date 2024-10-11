@@ -13,13 +13,20 @@ const http = require('http');
 const socketIo = require('socket.io');
 const server = http.createServer(app);
 
+const mysql = require('mysql2'); // Import mysql2
+
 
 app.use(cors({
 
     origin: 'http://localhost:5173', // React app's address
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], 
+    methods: ['GET', 'POST','PUT', 'PATCH', 'DELETE', 'OPTIONS'], 
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true // 
 }));
+// Allow preflight requests for all routes
+app.options('*', cors()); // This allows preflight requests for all routes
+
+
 
 const io = socketIo(server, {
     cors: {
@@ -665,11 +672,67 @@ app.post('/subscription_products', (req, res) => {
             console.log('Product added to subscription:', result);  // Log successful insert
             res.status(200).send('Product added to subscription');
         }
+        
     });
 });
 
 
 
 
+// Define your cancelToday function
+const cancelToday = (subs_ID, callback) => {
+    const query = 'UPDATE Subscription SET EndDate = DATE_ADD(EndDate, INTERVAL 1 DAY) WHERE subs_ID = ?';
+    
+    db.query(query, [subs_ID], (error, results) => {
+        if (error) {
+            console.error('Database error:', error);
+            callback(error, null);
+            return;
+        }
 
+        // Retrieve the new end date
+        const newQuery = 'SELECT EndDate FROM Subscription WHERE subs_ID = ?';
+        db.query(newQuery, [subs_ID], (err, rows) => {
+            if (err) {
+                console.error('Database error:', err);
+                callback(err, null);
+                return;
+            }
+            callback(null, rows[0].EndDate);
+        });
+    });
+};
 
+// Your existing Express route
+app.put('/subscription/cancelToday', (req, res) => {
+    const { subs_ID } = req.body;
+    
+    cancelToday(subs_ID, (error, newEndDate) => {
+        if (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+       
+        res.json({ message: 'Subscription canceled successfully', newEndDate });
+    });
+});
+
+// Add this route to get subscription details
+app.get('/subscription/details', (req, res) => {
+    const { subs_ID } = req.query; // Get subs_ID from query parameters
+
+    const query = 'SELECT EndDate, StartDate FROM Subscription WHERE subs_ID = ?';
+    db.query(query, [subs_ID], (error, results) => {
+        if (error) {
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'Subscription not found' });
+        }
+
+        // Return the subscription details
+        res.json({ 
+            endDate: results[0].EndDate,
+            startDate: results[0].StartDate 
+        });
+    });
+});
