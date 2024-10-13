@@ -68,12 +68,10 @@ const Subscription = () => {
                 {plans.map((plan, index) => (
                     <div key={index} className="plan-card">
                         <h3>{plan.name}</h3>
-                        <p className="price">{plan.price}</p>
-                        <ul>
-                            {plan.features.map((feature, i) => (
-                                <li key={i}>{feature}</li>
-                            ))}
-                        </ul>
+                       <p>
+                        Pay once's and get the order upto {plan.name} days.
+                       </p>
+                       <br />
                         <button className="get-plan-btn" onClick={() => handleGetPlan(plan)}>Get Plan</button>
                     </div>
                 ))}
