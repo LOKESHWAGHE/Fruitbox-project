@@ -1,107 +1,130 @@
-import React from 'react';
-import { useLocation } from 'react-router-dom';
+
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import './invoice.css';
+import axios from 'axios';
 
 function ViewSubscriptionOrder() {
     const location = useLocation();
-    const state = location.state || {}; // Add a default empty object if state is null
+    const state = location.state || {};
 
-    // Debugging: check if cartItems are passed properly
-    console.log("Location State:", state);
+    const [endDate, setEndDate] = useState(localStorage.getItem('subscriptionEndDate') || 'N/A');
+    const [subsId, setSubsId] = useState(localStorage.getItem('subscriptionID') || 'N/A');
+    const [subscriptionStatus, setSubscriptionStatus] = useState(localStorage.getItem('subscriptionStatus') || 'N/A');
 
-    // Retrieve subscription-related data from local storage
-    const subsId = localStorage.getItem('subscriptionID') || 'N/A';
-    let selectedPlan = localStorage.getItem('selectedPlan') || '{}'; // Default to empty object if not found
+    // Use cartItems from the passed state or localStorage
+    const [cartItems, setCartItems] = useState(state.cartItems || []);
+    const [totalPrice, setTotalPrice] = useState(state.totalPrice || 0);
+    const [platformFee, setPlatformFee] = useState(state.platformFee || 0);
+    const [finalTotal, setFinalTotal] = useState(state.finalTotal || 0);
+
+    useEffect(() => {
+        const storedCartItems = localStorage.getItem('cartItems');
+        if (storedCartItems) {
+            try {
+                const parsedCartItems = JSON.parse(storedCartItems);
+                
+                // Avoid double-counting by mapping the items properly
+                const uniqueItems = parsedCartItems.reduce((acc, item) => {
+                    const existingItem = acc.find(i => i.name === item.name);
+                    if (existingItem) {
+                        existingItem.quantity = item.quantity; // Replace the quantity instead of adding
+                    } else {
+                        acc.push(item);
+                    }
+                    return acc;
+                }, []);
+
+                setCartItems(uniqueItems);
+
+                // Calculate total price and final total
+                const total = uniqueItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+                setTotalPrice(total);
+                setFinalTotal(total + platformFee);
+            } catch (error) {
+                console.error('Error parsing cartItems from localStorage', error);
+                setCartItems([]);
+            }
+        } else {
+            setCartItems([]);
+        }
+    }, [platformFee]);
+
+    useEffect(() => {
+        // Store the cart items in local storage whenever they change
+        localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    }, [cartItems]); // Add cartItems to the dependency array
+
+    let selectedPlan = localStorage.getItem('selectedPlan') || '{}';
     try {
-        selectedPlan = JSON.parse(selectedPlan); // Parse the JSON string
+        selectedPlan = JSON.parse(selectedPlan);
     } catch (error) {
         console.error("Error parsing selectedPlan from local storage", error);
-        selectedPlan = {}; // Fallback to an empty object
+        selectedPlan = {};
     }
 
-    // Access the plan name (assuming it's in a field like 'name')
     const planName = selectedPlan.name || 'N/A';
-
-    // Get current (start) date
     const startDate = new Date();
+
     const plans = [
-        {
-            name: 'Weekly Plan',
-            price: '300/Week',
-            duration: 7, // Duration in days
-            features: [
-                '2 Fruits',
-                '2 Veggies',
-                'Quantity: 2/head',
-            ],
-        },
-        {
-            name: 'Monthly Plan',
-            price: '500/Month',
-            duration: 30, // Duration in days
-            features: [
-                '4 Fruits',
-                '4 Veggies',
-                'Quantity: 4/head',
-            ],
-        },
+        { name: 'Weekly Plan', price: '300/Week', duration: 7, features: ['2 Fruits', '2 Veggies', 'Quantity: 2/head'] },
+        { name: 'Monthly Plan', price: '500/Month', duration: 30, features: ['4 Fruits', '4 Veggies', 'Quantity: 4/head'] }
     ];
 
     const selectedPlanDetails = plans.find(plan => plan.name === planName);
 
-    // Calculate end date based on the selected plan's duration
-    let endDate = 'N/A'; // Default value if the plan is not found
-    if (selectedPlanDetails) {
-        endDate = new Date();
-        endDate.setDate(startDate.getDate() + selectedPlanDetails.duration); // Add plan's duration to current date
-        endDate = endDate.toLocaleDateString(); // Format the end date
-    }
+    const handleCancelToday = async () => {
+        try {
+            const response = await axios.put('http://localhost:3001/subscription/cancelToday', { subs_ID: subsId });
 
-    // Retrieve cart items from local storage
-    const storedCartItems = localStorage.getItem('cartItems');
-    const cartItems = storedCartItems ? JSON.parse(storedCartItems) : []; // Parse the cart items
+            if (response.data && response.data.newEndDate) {
+                const newEndDate = new Date(response.data.newEndDate);
+                newEndDate.setDate(newEndDate.getDate() + 1);
+                const formattedNewEndDate = newEndDate.toLocaleDateString();
+                setEndDate(formattedNewEndDate);
+                localStorage.setItem('subscriptionEndDate', formattedNewEndDate);
 
-    // Debugging: check if cartItems array exists and has data
-    console.log("Cart Items:", cartItems);
-
-    // Extract totalPrice, platformFee, and finalTotal from state or calculate them if needed
-    const totalPrice = state.totalPrice || cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-    const platformFee = state.platformFee || 10; // Example default platform fee
-    const finalTotal = state.finalTotal || (totalPrice + platformFee);
-
-    // Calculate the final total based on the plan's duration
-    let subscriptionFinalTotal = finalTotal; // Default value
-    if (selectedPlanDetails) {
-        subscriptionFinalTotal = finalTotal * selectedPlanDetails.duration; // Multiply by the plan duration
-    }
+                alert('Subscription day canceled, end date extended');
+            } else {
+                alert('Error: Could not update the subscription end date');
+            }
+        } catch (error) {
+            console.error('Error canceling subscription:', error);
+            alert('Error canceling subscription');
+        }
+    };
 
     return (
         <div className="invoice-container">
-            <h1 style={{ fontSize: '2em' }}>Subscription Plans</h1>
-            <div className="invoice-details">
-                <p><strong>Subscription ID:</strong> {subsId}</p>
-                <p><strong>Plan Name:</strong> {planName}</p>
-                <p><strong>Start Date:</strong> {startDate.toLocaleDateString()}</p>
-                <p><strong>End Date:</strong> {endDate}</p>
-                <div className="invoice-items">
-                    {cartItems.length > 0 ? (
-                        cartItems.map((item, index) => (
-                            <div key={index} className="invoice-item">
-                                <p>{item.name} (x{item.quantity})</p>
-                                <p>Rs. {item.price * item.quantity}</p>
-                            </div>
-                        ))
-                    ) : (
-                        <p>No items in the cart.</p>
-                    )}
-                </div>
-                <div className="invoice-summary">
-                    <p><strong>Total Price:</strong> Rs. {totalPrice}</p>
-                    <p><strong>Platform Fee:</strong> Rs. {platformFee}</p>
-                    <p style={{ color: 'green', fontSize: '1.5em' }}><strong>Final Total for Subscription:</strong> Rs. {subscriptionFinalTotal}</p>
-                </div>
+        <h1 style={{ fontSize: '2em' }}>Subscription Plans</h1>
+        <div className="invoice-details">
+            <p><strong>Subscription ID:</strong> {subsId}</p>
+            <p><strong>Plan Name:</strong> {planName}</p>
+            {selectedPlanDetails && (
+                <p><strong>Plan Price:</strong> Rs. {selectedPlanDetails.price}</p>
+            )}
+            <p><strong>Start Date:</strong> {startDate.toLocaleDateString()}</p>
+            <p><strong>End Date:</strong> {endDate}</p>
+            <p><strong>Status:</strong> {subscriptionStatus}</p>
+
+            {/* Display cart items */}
+            <div className="invoice-items">
+                <h3>Products in your subscription:</h3>
+                {cartItems.length > 0 ? (
+                    cartItems.map((item, index) => (
+                        <div key={index} className="invoice-item">
+                            <p>{item.name} (x{item.quantity})</p>
+                            <p>Rs. {item.price * item.quantity}</p>
+                        </div>
+                    ))
+                ) : (
+                    <p>No products in the cart.</p>
+                )}
             </div>
+
+            
         </div>
+    </div>
     );
 }
 
