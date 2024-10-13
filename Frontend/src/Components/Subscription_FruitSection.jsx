@@ -63,6 +63,8 @@ function Subscription_FruitSection({ addToCart, clearCart }) {
     }, []);
 
     const handleAddToCart = async(product) => {
+
+     
         const selectedQuantity = quantities[product.productID];
         console.log("Selected Quantity:", selectedQuantity);
         if (selectedQuantity > product.quantity) {
@@ -106,6 +108,7 @@ function Subscription_FruitSection({ addToCart, clearCart }) {
     console.log("Stored Cart Items:", cartItems);
     
         toast.success(`${product.productName} added to cart`);
+     
     };
 
     const handleQuantityChange = (productID, value) => {
@@ -135,6 +138,10 @@ function Subscription_FruitSection({ addToCart, clearCart }) {
         localStorage.setItem('cartItems', JSON.stringify(newCartItems)); // Ensure this line executes
         console.log("Stored Cart Items:", newCartItems); 
         // Clear the current cart state if needed
+
+        // Update the cartItems state in the parent (App) to ensure it gets reflected in Subscription_cart
+    // addToCart(newCartItems);
+    
          // Calculate total price, platform fee, and final total
     const totalPrice = newCartItems.reduce((total, item) => total + item.price * item.quantity, 0);
     const platformFee = totalPrice * 0.05; // Example fee: 5% of total price
