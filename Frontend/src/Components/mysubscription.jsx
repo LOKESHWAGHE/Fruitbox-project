@@ -1,21 +1,23 @@
+
+
 import React, { useEffect, useState } from 'react';
 import './mysubscription.css';
-import axios from 'axios'; // For making API requests
+import axios from 'axios';
 
 const MySubscription = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [subscriptionDates, setSubscriptionDates] = useState({ startDate: '', endDate: '' });
   const [subscriptionStatus, setSubscriptionStatus] = useState('');
-  const [subsID, setSubsID] = useState(null); // For storing subs_ID
+  const [subsID, setSubsID] = useState(null);
 
   useEffect(() => {
     const plan = localStorage.getItem('selectedPlan');
-    const savedSubsID = localStorage.getItem('subscriptionID'); // Get saved subs_ID
+    const savedSubsID = localStorage.getItem('subscriptionID');
 
     if (plan && savedSubsID) {
       const parsedPlan = JSON.parse(plan);
       setSelectedPlan(parsedPlan);
-      setSubsID(savedSubsID); // Set the subsID
+      setSubsID(savedSubsID);
 
       // Fetch subscription details from the backend
       const fetchSubscriptionDetails = async () => {
@@ -24,22 +26,22 @@ const MySubscription = () => {
             params: { subs_ID: savedSubsID }
           });
 
-          // Assuming response.data has the properties you expect
           const { endDate, startDate } = response.data;
-
-          // Make sure to handle date format correctly
           const formattedStartDate = new Date(startDate).toISOString().split('T')[0];
-          const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
+          const formattedEndDate = new Date(endDate);
+          const updatedEndDate = new Date(formattedEndDate);
+          updatedEndDate.setDate(updatedEndDate.getDate() + 1);
+          const formattedEndDatePlusOne = updatedEndDate.toISOString().split('T')[0];
 
-          setSubscriptionDates({ startDate: formattedStartDate, endDate: formattedEndDate });
+          setSubscriptionDates({ startDate: formattedStartDate, endDate: formattedEndDatePlusOne });
+          localStorage.setItem('subscriptionEndDate', formattedEndDatePlusOne);
 
           const currentDate = new Date();
           const subscriptionEndDate = new Date(endDate);
-          if (currentDate > subscriptionEndDate) {
-            setSubscriptionStatus('Expired');
-          } else {
-            setSubscriptionStatus('Active');
-          }
+
+          const status = currentDate.getTime() !== subscriptionEndDate.getTime() ? 'Active' : 'Expired';
+          setSubscriptionStatus(status);
+          localStorage.setItem('subscriptionStatus', status); // Save subscription status to localStorage
         } catch (error) {
           console.error('Error fetching subscription details:', error);
         }
@@ -51,30 +53,18 @@ const MySubscription = () => {
 
   const handleCancelToday = async () => {
     try {
-      console.log('Sending subs_ID:', subsID); // Debugging line
-      const response = await axios.put('http://localhost:3001/subscription/cancelToday', {
-        subs_ID: subsID
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await axios.put('http://localhost:3001/subscription/cancelToday', { subs_ID: subsID });
 
-      // Check the response for the updated EndDate
       if (response.data && response.data.newEndDate) {
-        console.log('Updated end date:', response.data.newEndDate);
+        const newEndDate = new Date(response.data.newEndDate);
+        newEndDate.setDate(newEndDate.getDate() + 1);
+        const formattedNewEndDate = newEndDate.toISOString().split('T')[0];
 
-        // Update the endDate in state to reflect the updated end date from the server
-        const newEndDate = new Date(response.data.newEndDate).toISOString().split('T')[0];
-
-        setSubscriptionDates(prev => ({
-          ...prev,
-          endDate: newEndDate // Update only the endDate
-        }));
+        setSubscriptionDates(prev => ({ ...prev, endDate: formattedNewEndDate }));
+        localStorage.setItem('subscriptionEndDate', formattedNewEndDate);
 
         alert('Subscription day canceled, end date extended');
       } else {
-        console.error('No new end date received');
         alert('Error: Could not update the subscription end date');
       }
     } catch (error) {
@@ -89,21 +79,17 @@ const MySubscription = () => {
       {selectedPlan ? (
         <div className="subscription-details">
           <h2>{selectedPlan.name}</h2>
-          <p>Price: {selectedPlan.price}</p>
-          
-          <p>Start Date: {new Date().toISOString().split('T')[0]}</p>
-
+          <p>Start Date: {subscriptionDates.startDate}</p>
+          <br />
           <p>End Date: {subscriptionDates.endDate}</p>
-          <h3>Features:</h3>
-          <ul className="features">
-            {selectedPlan.features.map((feature, index) => (
-              <li key={index}>{feature}</li>
-            ))}
-          </ul>
+          <br />
+        
           <p>Status: <strong>{subscriptionStatus}</strong></p>
-
-          {/* Cancel today's subscription */}
+          <br />
+          <p>You can cancel today order . Your end date extends</p>
+          <br />
           <button className="cancel-button" onClick={handleCancelToday}>Cancel Today</button>
+          <br />
         </div>
       ) : (
         <p className="no-subscription">No subscription selected.</p>
