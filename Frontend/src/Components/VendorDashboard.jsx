@@ -31,13 +31,8 @@ const VendorDashboard = () => {
                     <div style={styles.card}>
                         <h3 style={styles.cardTitle}>Subscription Orders</h3>
                         <p style={styles.cardDescription}>View and manage  customer orders.</p>
-                        <Link to="/view_subscription_order" state={{
-    cartItems,
-    totalPrice,
-    platformFee,
-    finalTotal,
-}}>
-    <button className="back-button">View Order</button>
+                        <Link to="/viewSubscriptionOrder">
+    <button style={styles.cardButton}>View Order</button>
 </Link>
 
                     </div>
