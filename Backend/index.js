@@ -628,28 +628,68 @@ app.get('/logout', (req, res) => {
 
 
 
+// app.post('/subscription', (req, res) => {
+//     const { userID, subs_Type, StartDate, EndDate } = req.body;
+
+//     // Check for required fields
+//     if (!userID || !subs_Type || !StartDate || !EndDate) {
+//         return res.status(400).send('All fields are required!'); // Send a 400 Bad Request
+//     }
+
+//     // Insert the new subscription into the database
+//     const query = 'INSERT INTO Subscription (userID, subs_Type, StartDate, EndDate) VALUES (?, ?, ?, ?)';
+//     db.query(query, [userID, subs_Type, StartDate, EndDate], (error, results) => {
+//         if (error) {
+//             console.error('Error saving subscription:', error);
+//             return res.status(500).json({ message: 'Error saving subscription' });
+//         }
+//         // Get the generated subs_ID
+//         const subsID = results.insertId;
+        
+//         // Redirect or send success response
+//         res.status(201).json({ message: 'Subscription saved successfully!', id: results.insertId , subsID});
+//     });
+// });
+
+
+
 app.post('/subscription', (req, res) => {
     const { userID, subs_Type, StartDate, EndDate } = req.body;
 
-    // Check for required fields
-    if (!userID || !subs_Type || !StartDate || !EndDate) {
-        return res.status(400).send('All fields are required!'); // Send a 400 Bad Request
+    // Check for required fields in a single condition
+    if ([userID, subs_Type, StartDate, EndDate].some(field => !field)) {
+        return res.status(400).json({ message: 'All fields are required!' });
     }
 
-    // Insert the new subscription into the database
-    const query = 'INSERT INTO Subscription (userID, subs_Type, StartDate, EndDate) VALUES (?, ?, ?, ?)';
-    db.query(query, [userID, subs_Type, StartDate, EndDate], (error, results) => {
+    // Query to check if the user already has a subscription
+    const checkQuery = 'SELECT * FROM Subscription WHERE userID = ?';
+    
+    db.query(checkQuery, [userID], (error, results) => {
         if (error) {
-            console.error('Error saving subscription:', error);
-            return res.status(500).json({ message: 'Error saving subscription' });
+            console.error('Error checking subscription:', error);
+            return res.status(500).json({ message: 'Error checking subscription' });
         }
-        // Get the generated subs_ID
-        const subsID = results.insertId;
-        
-        // Redirect or send success response
-        res.status(201).json({ message: 'Subscription saved successfully!', id: results.insertId , subsID});
+
+        // If a subscription exists for the user, return an error
+        if (results.length > 0) {
+            return res.status(400).json({ message: 'Subscription already exists for this user.' });
+        }
+
+        // If no subscription exists, insert the new subscription
+        const insertQuery = 'INSERT INTO Subscription (userID, subs_Type, StartDate, EndDate) VALUES (?, ?, ?, ?)';
+        db.query(insertQuery, [userID, subs_Type, StartDate, EndDate], (error, insertResults) => {
+            if (error) {
+                console.error('Error saving subscription:', error);
+                return res.status(500).json({ message: 'Error saving subscription' });
+            }
+
+            // Return the generated subs_ID in the response
+            const subsID = insertResults.insertId;
+            return res.status(201).json({ message: 'Subscription saved successfully!', subsID });
+        });
     });
 });
+
 
 
 app.post('/subscription_products', (req, res) => {
@@ -734,5 +774,47 @@ app.get('/subscription/details', (req, res) => {
             endDate: results[0].EndDate,
             startDate: results[0].StartDate 
         });
+    });
+});
+
+
+app.delete('/subscription-products/:subsId', (req, res) => {
+    const { subsId } = req.params;
+
+    // Check if the subscription ID is provided
+    if (!subsId) {
+        return res.status(400).json({ message: 'Subscription ID is required.' });
+    }
+
+    // Query to delete subscription products for the given subscription ID
+    const deleteQuery = 'DELETE FROM subscription_products WHERE subs_ID = ?';
+    
+    db.query(deleteQuery, [subsId], (error, results) => {
+        if (error) {
+            console.error('Error deleting subscription products:', error);
+            return res.status(500).json({ message: 'Error deleting subscription products.' });
+        }
+
+        return res.status(200).json({ message: 'Subscription products cleared successfully!' });
+    });
+});
+
+
+app.get('/subscription-products/:subsId', (req, res) => {
+    const { subsId } = req.params;
+
+    const fetchQuery = `
+        SELECT p.productName, sp.quantity, p.price 
+        FROM subscription_products sp 
+        JOIN product p ON sp.productID = p.productID 
+        WHERE sp.subs_ID = ?`;
+
+    db.query(fetchQuery, [subsId], (error, results) => {
+        if (error) {
+            console.error('Error fetching subscription products:', error);
+            return res.status(500).json({ message: 'Error fetching subscription products.' });
+        }
+
+        res.status(200).json(results);
     });
 });
